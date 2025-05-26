@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ArrowLeft, ShoppingCart, Send, Printer, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import ProductGrid from './ProductGrid';
 import CheckoutDialog from './CheckoutDialog';
 import TableManagement from './TableManagement';
 import CashManagement from './CashManagement';
+import ProductManagement from './ProductManagement';
 import { useOrderManagement } from '@/hooks/useOrderManagement';
 
 interface CartItem {
@@ -29,6 +29,7 @@ const PDVTerminal: React.FC<PDVTerminalProps> = ({ onBack, onSendToKitchen }) =>
   const [selectedTableId, setSelectedTableId] = useState<string>();
   const [selectedTableNumber, setSelectedTableNumber] = useState<number>();
   const [orderType, setOrderType] = useState<'table' | 'takeaway'>('table');
+  const [refreshProducts, setRefreshProducts] = useState(0);
 
   const { sendToKitchen, loading } = useOrderManagement({ 
     cart, 
@@ -83,6 +84,10 @@ const PDVTerminal: React.FC<PDVTerminalProps> = ({ onBack, onSendToKitchen }) =>
     setSelectedTableId(tableId);
     setSelectedTableNumber(tableNumber);
     setOrderType('table');
+  };
+
+  const handleProductAdded = () => {
+    setRefreshProducts(prev => prev + 1);
   };
 
   const printOrder = () => {
@@ -172,14 +177,16 @@ const PDVTerminal: React.FC<PDVTerminalProps> = ({ onBack, onSendToKitchen }) =>
         {/* Products Section */}
         <div className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-xl">Produtos Disponíveis</CardTitle>
+              <ProductManagement onProductAdded={handleProductAdded} />
             </CardHeader>
             <CardContent className="p-0">
               <ProductGrid 
                 onAddToCart={addToCart}
                 cart={cart}
                 onUpdateQuantity={updateQuantity}
+                refreshTrigger={refreshProducts}
               />
             </CardContent>
           </Card>
@@ -299,6 +306,8 @@ const PDVTerminal: React.FC<PDVTerminalProps> = ({ onBack, onSendToKitchen }) =>
             setShowCheckout(false);
             clearCart();
           }}
+          tableId={selectedTableId}
+          orderType={orderType}
         />
       )}
     </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,16 +25,22 @@ interface ProductGridProps {
   onAddToCart: (item: CartItem) => void;
   cart: CartItem[];
   onUpdateQuantity: (id: string, quantity: number) => void;
+  refreshTrigger?: number;
 }
 
-const ProductGrid: React.FC<ProductGridProps> = ({ onAddToCart, cart, onUpdateQuantity }) => {
+const ProductGrid: React.FC<ProductGridProps> = ({ 
+  onAddToCart, 
+  cart, 
+  onUpdateQuantity,
+  refreshTrigger = 0
+}) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [refreshTrigger]);
 
   const fetchProducts = async () => {
     try {
