@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import ProductGrid from './ProductGrid';
-import OrderManagement from './OrderManagement';
 import CheckoutDialog from './CheckoutDialog';
+import TableManagement from './TableManagement';
+import CashManagement from './CashManagement';
+import { useOrderManagement } from '@/hooks/useOrderManagement';
 
 interface CartItem {
   id: string;
@@ -24,10 +26,15 @@ interface PDVTerminalProps {
 const PDVTerminal: React.FC<PDVTerminalProps> = ({ onBack, onSendToKitchen }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [selectedTableId, setSelectedTableId] = useState<string>();
+  const [selectedTableNumber, setSelectedTableNumber] = useState<number>();
+  const [orderType, setOrderType] = useState<'table' | 'takeaway'>('table');
 
-  const { sendToKitchen, loading } = OrderManagement({ 
+  const { sendToKitchen, loading } = useOrderManagement({ 
     cart, 
-    onClearCart: () => setCart([]) 
+    onClearCart: () => setCart([]),
+    tableId: selectedTableId,
+    orderType
   });
 
   const addToCart = (item: CartItem) => {
@@ -72,6 +79,50 @@ const PDVTerminal: React.FC<PDVTerminalProps> = ({ onBack, onSendToKitchen }) =>
     setCart([]);
   };
 
+  const handleSelectTable = (tableId: string, tableNumber: number) => {
+    setSelectedTableId(tableId);
+    setSelectedTableNumber(tableNumber);
+    setOrderType('table');
+  };
+
+  const printOrder = () => {
+    const orderContent = `
+      PASTEL NETO - PEDIDO
+      ${new Date().toLocaleString('pt-BR')}
+      ${selectedTableNumber ? `Mesa: ${selectedTableNumber}` : 'Balcão'}
+      ================================
+      
+      ${cart.map(item => 
+        `${item.quantity}x ${item.name}\n      R$ ${item.price.toFixed(2)} cada\n      Subtotal: R$ ${(item.price * item.quantity).toFixed(2)}`
+      ).join('\n      \n      ')}
+      
+      ================================
+      TOTAL: R$ ${getTotalPrice().toFixed(2)}
+      ================================
+      Sistema PDV - Pastel Neto
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Pedido - Pastel Neto</title>
+            <style>
+              body { font-family: monospace; font-size: 12px; }
+              pre { white-space: pre-wrap; }
+            </style>
+          </head>
+          <body>
+            <pre>${orderContent}</pre>
+            <script>window.print(); window.close();</script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -95,12 +146,29 @@ const PDVTerminal: React.FC<PDVTerminalProps> = ({ onBack, onSendToKitchen }) =>
               <ShoppingCart className="w-5 h-5" />
               <span className="font-semibold">{getTotalItems()} itens</span>
             </div>
+            {selectedTableNumber && (
+              <div className="bg-white/20 px-3 py-2 rounded-lg">
+                <span className="font-semibold">Mesa {selectedTableNumber}</span>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <div className="desktop-grid mobile-grid gap-6 p-6">
+        {/* Left Section */}
+        <div className="space-y-4">
+          {/* Table Management */}
+          <TableManagement 
+            onSelectTable={handleSelectTable}
+            selectedTableId={selectedTableId}
+          />
+
+          {/* Cash Management */}
+          <CashManagement />
+        </div>
+
         {/* Products Section */}
         <div className="space-y-4">
           <Card>
@@ -193,14 +261,25 @@ const PDVTerminal: React.FC<PDVTerminalProps> = ({ onBack, onSendToKitchen }) =>
                         {loading ? 'Enviando...' : 'Enviar para Cozinha'}
                       </Button>
                       
-                      <Button
-                        onClick={() => setShowCheckout(true)}
-                        variant="outline"
-                        className="w-full touch-button border-green-600 text-green-600 hover:bg-green-50"
-                      >
-                        <DollarSign className="w-4 h-4 mr-2" />
-                        Finalizar Venda
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => setShowCheckout(true)}
+                          variant="outline"
+                          className="flex-1 touch-button border-green-600 text-green-600 hover:bg-green-50"
+                        >
+                          <DollarSign className="w-4 h-4 mr-2" />
+                          Finalizar Venda
+                        </Button>
+                        
+                        <Button
+                          onClick={printOrder}
+                          variant="outline"
+                          size="icon"
+                          className="touch-button"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </>

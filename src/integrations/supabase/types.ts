@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      cash_movements: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          order_id: string | null
+          payment_method: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          payment_method?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          payment_method?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -61,8 +99,10 @@ export type Database = {
           created_at: string
           id: string
           order_number: string
+          order_type: string | null
           payment_method: string | null
           status: string
+          table_id: string | null
           total: number
           updated_at: string
         }
@@ -72,8 +112,10 @@ export type Database = {
           created_at?: string
           id?: string
           order_number: string
+          order_type?: string | null
           payment_method?: string | null
           status?: string
+          table_id?: string | null
           total: number
           updated_at?: string
         }
@@ -83,12 +125,22 @@ export type Database = {
           created_at?: string
           id?: string
           order_number?: string
+          order_type?: string | null
           payment_method?: string | null
           status?: string
+          table_id?: string | null
           total?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
@@ -117,6 +169,27 @@ export type Database = {
           id?: string
           name?: string
           price?: number
+        }
+        Relationships: []
+      }
+      tables: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          table_number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          table_number: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          table_number?: number
         }
         Relationships: []
       }
