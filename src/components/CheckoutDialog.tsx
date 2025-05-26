@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -22,9 +21,18 @@ interface CheckoutDialogProps {
   total: number;
   onClose: () => void;
   onComplete: () => void;
+  tableId?: string;
+  orderType?: 'table' | 'takeaway';
 }
 
-const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ cart, total, onClose, onComplete }) => {
+const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ 
+  cart, 
+  total, 
+  onClose, 
+  onComplete,
+  tableId,
+  orderType = 'takeaway'
+}) => {
   const [paymentMethod, setPaymentMethod] = useState<'dinheiro' | 'pix' | 'cartao'>('dinheiro');
   const [amountPaid, setAmountPaid] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -35,7 +43,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ cart, total, onClose, o
   const generateOrderNumber = () => {
     const now = new Date();
     const timestamp = now.getTime().toString().slice(-6);
-    return `VEN${timestamp}`;
+    return `PED${timestamp}`;
   };
 
   const handleFinalizeSale = async () => {
@@ -54,16 +62,18 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ cart, total, onClose, o
       const orderNumber = generateOrderNumber();
       const paidAmount = paymentMethod === 'dinheiro' ? parseFloat(amountPaid) : total;
 
-      // Criar o pedido finalizado
+      // Criar o pedido
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           order_number: orderNumber,
           total: total,
-          status: 'delivered',
+          status: 'received', // Pedido já é enviado como 'received' para a cozinha
           payment_method: paymentMethod,
           amount_paid: paidAmount,
-          change_amount: change
+          change_amount: change,
+          table_id: tableId,
+          order_type: orderType
         })
         .select()
         .single();
@@ -85,12 +95,33 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ cart, total, onClose, o
 
       if (itemsError) throw itemsError;
 
+      // Registrar movimento de caixa
+      const { error: cashError } = await supabase
+        .from('cash_movements')
+        .insert({
+          type: 'sale',
+          amount: paidAmount,
+          payment_method: paymentMethod,
+          order_id: order.id,
+          description: `Venda ${orderNumber}`
+        });
+
+      if (cashError) throw cashError;
+
+      // Atualizar status da mesa se for pedido de mesa
+      if (tableId && orderType === 'table') {
+        await supabase
+          .from('tables')
+          .update({ status: 'occupied' })
+          .eq('id', tableId);
+      }
+
       // Gerar comprovante
       generateReceipt(order, cart, paymentMethod, paidAmount, change);
 
       toast({
         title: "Venda finalizada!",
-        description: `Venda ${orderNumber} finalizada com sucesso.`,
+        description: `Venda ${orderNumber} finalizada e enviada para a cozinha.`,
       });
 
       onComplete();
